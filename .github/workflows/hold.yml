@@ -1,0 +1,9 @@
+name: architect hold
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+permissions:
+  pull-requests: read
+jobs:
+  hold:
+    uses: partsfoundry/crate-workflows/.github/workflows/hold.yml@11d6d6bbf760462fa1e45275d34b55b88dcde44a

@@ -1,0 +1,21 @@
+Falsifies `jh7110_clock_and_reset::verification::every_fixed_plan_ungates_its_clocks_before_releasing_a_reset`.
+
+The defect: the TRNG's plan releases its reset before it enables its clocks. A reset release
+against a gated clock can hang forever, which is the order the plans exist to rule out.
+
+Expected to fail: the harness's check of `ENTROPY_BRING_UP`, the first assertion in the body.
+
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -131,9 +131,9 @@
+ /// assert!(!is_deasserted(0b0111, r.mask));
+ /// ```
+ pub const ENTROPY_BRING_UP: &[Step] = &[
++    Step::DeassertReset(SYSTEM_TOP_GROUP_RESET_SECURITY_ADVANCED_HIGH_PERFORMANCE_BUS),
+     Step::EnableClock(STGCLK_SECURITY_AHB),
+     Step::EnableClock(STGCLK_SECURITY_MISC_AHB),
+-    Step::DeassertReset(SYSTEM_TOP_GROUP_RESET_SECURITY_ADVANCED_HIGH_PERFORMANCE_BUS),
+ ];
+ 
+ /// `JH7110_STGCLK_SEC_AHB` \[mainline-ids\]; the vendor tree's `JH7110_SEC_HCLK` (205) rebased on

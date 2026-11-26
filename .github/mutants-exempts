@@ -1,0 +1,11 @@
+# A mutant that survives goes here, one per line, with the reason it is equivalent behavior:
+#   src/lib.rs:4 # swapping the operand order is the same arithmetic
+# A line without a reason is refused, and a line naming a survivor that no longer exists is
+# refused too, so this list can only shrink by a diff that says why.
+
+src/lib.rs:101 # word & !CLOCK_MULTIPLEXER_MASK and (parent << CLOCK_MUX_SHIFT) & CLOCK_MULTIPLEXER_MASK are disjoint by their masks, so | equals ^
+src/lib.rs:788 # the high cell is shifted to bits 32 and up and the low cell is a zero-extended u32, so the operands are disjoint and | equals ^
+src/lib.rs:789 # the high cell is shifted to bits 32 and up and the low cell is a zero-extended u32, so the operands are disjoint and | equals ^
+src/lib.rs:1133 # the branch returns 1, and at divider == 1 the value returned below is also 1
+src/lib.rs:1135 # the branch returns MAXIMUM_SD_CARD_DIVIDER, and at divider == MAXIMUM_SD_CARD_DIVIDER the value returned below is the same
+src/lib.rs:1146 # the two operands are masked to disjoint bits (& !0x00ff_ffff and & 0x00ff_ffff), and | equals ^ on disjoint bits

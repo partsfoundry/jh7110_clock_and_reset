@@ -1,0 +1,18 @@
+Falsifies `jh7110_clock_and_reset::verification::is_clock_enabled_reads_bit_31_and_nothing_else`.
+
+The defect: the test reads bit 30, a divider bit, instead of the enable bit.
+
+Expected to fail: the harness's first assertion, equality with the top bit of the word.
+
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1377,7 +1377,7 @@
+ /// **Is this clock running?** Given the clock's own word.
+ #[must_use]
+ pub const fn is_clock_enabled(clock_word: u32) -> bool {
+-    clock_word & CLOCK_ENABLE != 0
++    clock_word & (CLOCK_ENABLE >> 1) != 0
+ }
+ 
+ /// How many `EnableClock` steps a report keeps words for. Two is what the TRNG needs; four is

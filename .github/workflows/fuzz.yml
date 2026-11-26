@@ -1,0 +1,13 @@
+name: fuzz
+on:
+  schedule:
+    - cron: '45 6 * * 2'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fuzz:
+    uses: partsfoundry/crate-workflows/.github/workflows/fuzz.yml@11d6d6bbf760462fa1e45275d34b55b88dcde44a
+    with:
+      # Crash inputs are public. Set true only for a crate with no unsafe code.
+      public-crash-inputs: false
