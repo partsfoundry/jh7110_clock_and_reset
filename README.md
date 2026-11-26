@@ -66,11 +66,8 @@ Ten Kani harnesses (`cargo kani`, stock Kani) prove, each with a falsification p
   definition names, for every word.
 
 Each harness has a falsification record at
-`falsifications/<module.path>.<harness>.patch`. To run one, apply it with `git apply -p1` from the
-crate root, run the harness (`cargo kani --harness
-verification::a_clock_offset_is_one_of_the_domains_own_words --exact`) and watch it fail at its own
-assertion, which shows the proof checks something. The patches need a git checkout, and you revert
-each one with `git checkout -- src` before the next.
+`falsifications/<module.path>.<harness>.patch`, and "Running one falsification patch" below shows
+how to apply one and watch its harness fail.
 
 Not proved: that a plan's order is the one the silicon needs, which only a board shows. The proofs
 also leave out the specifier decoders when the lookup answers differently (another provider,
@@ -101,19 +98,94 @@ becomes a store.
 
 ## Build, test and prove
 
-You need a Rust toolchain at or above the minimum version at the foot of this page (`rustup` is the
-usual way to get one) and a git checkout. From the crate root:
+You need `git`, a Rust toolchain installed with [rustup](https://rustup.rs) at or above the
+minimum version at the foot of this page, and a C linker (`cc`), which Rust uses to link the host
+tests. Get the source and build from its top directory:
 
-- `cargo build` and `cargo test` run on the host and need nothing else. `cargo test` runs the
-  unit tests and the doctests, this README's example among them.
-- The crate also builds for bare metal. Add the three targets with `rustup target add
-  riscv64imac-unknown-none-elf aarch64-unknown-none-softfloat x86_64-unknown-none`. Then run
-  `cargo build --lib --target <target>` for each. CI does exactly this.
-- The proofs need Kani, which `rustup` does not install. Run `cargo install --locked
-  kani-verifier --version 0.68.0`, then `cargo kani setup`. The setup step downloads a model
-  checker, so it needs network access. CI uses version 0.68.0, and another version may verify
-  differently. After that, `cargo kani` runs all ten harnesses in about 5 minutes (measured 4 minutes 46 seconds), using at most about 900 megabytes of
-  memory. To run one, use `cargo kani --harness verification::<name> --exact`.
+```sh
+git clone https://github.com/partsfoundry/jh7110_clock_and_reset
+cd jh7110_clock_and_reset
+cargo build
+cargo test
+rustup target add riscv64imac-unknown-none-elf aarch64-unknown-none-softfloat x86_64-unknown-none
+cargo build --lib --target riscv64imac-unknown-none-elf
+cargo build --lib --target aarch64-unknown-none-softfloat
+cargo build --lib --target x86_64-unknown-none
+```
+
+The crate has no features and no dependencies, so a plain `cargo test` runs every unit test and
+doctest, this README's example among them. The three bare-metal builds are the ones CI runs.
+
+### Running the proofs
+
+The proofs need Kani, which `rustup` does not install. Run `cargo install --locked kani-verifier
+--version 0.68.0`, then `cargo kani setup`. Both need network access. `cargo install` builds only
+Kani's small installer. Setup downloads Kani's release bundle and the nightly Rust toolchain Kani
+is pinned to, and then holds about 485 megabytes in `~/.kani` and 1.5 gigabytes in `~/.rustup`.
+From empty Cargo and rustup directories the install took 4 seconds and setup 22. CI uses version
+0.68.0, and another version may verify differently. Then run every harness:
+
+```sh
+cargo kani
+```
+
+The ten harnesses take 3 to 5 minutes and peak near 900 megabytes of memory, as
+`/usr/bin/time -v cargo kani` (Linux only; macOS has no `-v`) measured on two x86_64 hosts. Three
+harnesses take almost all of that time, the two that build plans from device-tree specifiers and
+the transmit parent harness; each other harness takes under a second. To run one harness, give its
+full path, because `--exact` refuses a bare name:
+
+```sh
+cargo kani --harness verification::a_clock_offset_is_one_of_the_domains_own_words --exact
+```
+
+A passing run prints lines that look alarming and mean nothing. Two are warnings: `use of an
+unstable feature` for `register_tool`, and `Found the following unsupported constructs`. Some
+checks read `Status: UNREACHABLE`, and some read `internal error: entered unreachable code` with
+`Status: SUCCESS`. Many `aborting path on assume(false)` lines are paths Kani discards on
+purpose. The answer is the last line, `Complete - 10 successfully verified harnesses, 0
+failures, 10 total.`, and `cargo kani` exits 0.
+
+### Running one falsification patch
+
+Each file in `falsifications/` applies a small defect that turns its harness red. The patches need
+a git checkout. Apply one from the top directory, confirm the proof fails, then revert it before
+the next:
+
+```sh
+git apply -p1 falsifications/verification.a_clock_offset_is_one_of_the_domains_own_words.patch
+cargo kani --harness verification::a_clock_offset_is_one_of_the_domains_own_words --exact
+git checkout -- src
+```
+
+The failing run prints `Failed Checks: assertion failed: index < domain.clocks` and
+`VERIFICATION:- FAILED`. It ends with `Complete - 0 successfully verified harnesses, 1 failures, 1
+total.`, and `cargo kani` exits 1. Each patch's opening lines name the assertion it expects to
+fail; the transmit parent patch fails inside `transmit_parent_is_an_input`, the helper its harness
+calls.
+
+### Checking the minimum Rust version
+
+```sh
+rustup toolchain install 1.88 --profile minimal
+rustup target add --toolchain 1.88 riscv64imac-unknown-none-elf aarch64-unknown-none-softfloat x86_64-unknown-none
+cargo +1.88 test
+cargo +1.88 build --lib --target riscv64imac-unknown-none-elf
+```
+
+Repeat the last line for the other two targets. The proofs use Kani's own toolchain, not this one.
+
+## Using it
+
+The project has not published this crate, and publishing is on hold. No release tag exists yet.
+Depend on it by git, pinned to a commit of this repository's `main` and never to a branch:
+
+```toml
+[dependencies]
+jh7110_clock_and_reset = { git = "https://github.com/partsfoundry/jh7110_clock_and_reset", rev = "<full commit hash>" }
+```
+
+Once a pre-release tag exists, use `tag = "<that tag>"` in place of `rev`.
 
 ## BUGS
 

@@ -101,7 +101,9 @@ fn a_clock_offset_is_one_of_the_domains_own_words() {
     let domain = any_domain();
     let index: u32 = kani::any();
     match domain.clock_offset(index) {
-        None => assert!(index >= domain.clocks),
+        None => {
+            assert!(index >= domain.clocks);
+        }
         Some(offset) => {
             assert!(index < domain.clocks);
             assert_eq!(offset % 4, 0);
@@ -121,7 +123,9 @@ fn a_reset_line_is_one_bit_of_one_of_the_domains_own_words() {
     let domain = any_domain();
     let id: u32 = kani::any();
     match domain.reset_bit(id) {
-        None => assert!(id >= domain.resets),
+        None => {
+            assert!(id >= domain.resets);
+        }
         Some(bit) => {
             assert!(id < domain.resets);
             assert_eq!(bit.assert_offset % 4, 0);
